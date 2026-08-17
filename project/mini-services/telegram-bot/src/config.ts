@@ -1,13 +1,25 @@
 // Configuration for the Telegram admin bot of سرزمین عسل
 // All values are read from environment variables (set in .env by setup.sh).
+// No hardcoded fallbacks — the script fails loudly if env vars are missing.
 
 export const BOT_TOKEN =
   process.env.TELEGRAM_BOT_TOKEN ||
-  "8902705780:AAFGE0CuGGvyXYDT2yQRHME6iKB4sdXG3pQ";
+  (() => {
+    throw new Error(
+      "TELEGRAM_BOT_TOKEN environment variable is not set. " +
+        "Make sure .env exists and is loaded (systemd EnvironmentFile)."
+    );
+  })();
 
 // Telegram numeric ID of the admin (sales manager)
 export const ADMIN_ID = Number(
-  process.env.TELEGRAM_ADMIN_ID || "5207653104"
+  process.env.TELEGRAM_ADMIN_ID ||
+    (() => {
+      throw new Error(
+        "TELEGRAM_ADMIN_ID environment variable is not set. " +
+          "Make sure .env exists and is loaded (systemd EnvironmentFile)."
+      );
+    })()
 );
 
 // HTTP port for receiving notifications from the Next.js app

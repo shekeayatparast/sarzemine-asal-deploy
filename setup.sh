@@ -34,9 +34,10 @@ LOG_DIR="/var/log/sarzemine-asal"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_SRC="$SCRIPT_DIR/project"
 
-# Default bot config (user can override during install)
-DEFAULT_BOT_TOKEN="8902705780:AAFGE0CuGGvyXYDT2yQRHME6iKB4sdXG3pQ"
-DEFAULT_ADMIN_ID="5207653104"
+# Default bot config — empty by default. User MUST enter their own values.
+# This avoids leaking secrets into version control.
+DEFAULT_BOT_TOKEN=""
+DEFAULT_ADMIN_ID=""
 
 # Default GitHub repo (can be overridden with GITHUB_REPO_URL env var or via prompt)
 DEFAULT_GITHUB_REPO=""
@@ -140,17 +141,41 @@ step "Step 2/8: Configuration"
 
 echo ""
 echo -e "${BOLD}Please answer the following questions:${NC}"
-echo -e "${YELLOW}(Press Enter to accept defaults in brackets)${NC}"
 echo ""
 
-# Bot token
-read -rp "$(echo -e "${CYAN} Telegram bot token [${DEFAULT_BOT_TOKEN}]: ${NC}")" BOT_TOKEN
-BOT_TOKEN="${BOT_TOKEN:-$DEFAULT_BOT_TOKEN}"
+# Bot token — required (no default for security)
+echo -e "${BOLD}Telegram bot token${NC} (from @BotFather)"
+echo -e "  Get one by messaging @BotFather → /newbot"
+while true; do
+  read -rp "$(echo -e "${CYAN} Bot token: ${NC}")" BOT_TOKEN
+  if [[ -z "$BOT_TOKEN" ]]; then
+    err "Bot token is required. Cannot continue without it."
+    continue
+  fi
+  if [[ ! "$BOT_TOKEN" =~ ^[0-9]+:AA[a-zA-Z0-9_-]+$ ]]; then
+    warn "Token doesn't look like a Telegram bot token (expected format: 123456789:AAxxx). Try again."
+    continue
+  fi
+  break
+done
 ok "Bot token: ${BOT_TOKEN:0:15}..."
 
-# Admin ID
-read -rp "$(echo -e "${CYAN} Your Telegram admin ID [${DEFAULT_ADMIN_ID}]: ${NC}")" ADMIN_ID
-ADMIN_ID="${ADMIN_ID:-$DEFAULT_ADMIN_ID}"
+# Admin ID — required (no default for security)
+echo ""
+echo -e "${BOLD}Your Telegram admin ID${NC}"
+echo -e "  Send /start to @userinfobot to find yours"
+while true; do
+  read -rp "$(echo -e "${CYAN} Admin ID: ${NC}")" ADMIN_ID
+  if [[ -z "$ADMIN_ID" ]]; then
+    err "Admin ID is required. Cannot continue without it."
+    continue
+  fi
+  if [[ ! "$ADMIN_ID" =~ ^[0-9]+$ ]]; then
+    warn "Admin ID must be numeric. Try again."
+    continue
+  fi
+  break
+done
 ok "Admin ID: $ADMIN_ID"
 
 # Domain
