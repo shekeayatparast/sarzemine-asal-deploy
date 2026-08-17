@@ -21,14 +21,14 @@
 روی سرور خود، فایل `setup.sh` را اجرا کنید:
 
 ```bash
-# روش ۱: اگر فقط setup.sh را دارید (از GitHub دانلود شده)
-curl -o setup.sh https://raw.githubusercontent.com/YOUR_USERNAME/sarzemine-asal/main/setup.sh
+# روش ۱ (ساده‌ترین): دانلود فقط setup.sh و اجرا
+curl -o setup.sh https://raw.githubusercontent.com/shekeayatparast/sarzemine-asal-deploy/main/setup.sh
 sudo bash setup.sh
-# → از شما آدرس GitHub repo را می‌پرسد
+# → نصب‌کننده به‌طور خودکار repo را clone می‌کند
 
-# روش ۲: اگر کل پوشه را کلون کرده‌اید
-git clone https://github.com/YOUR_USERNAME/sarzemine-asal.git
-cd sarzemine-asal
+# روش ۲: clone کل repo (پیشنهادی برای کنترل بیشتر)
+git clone https://github.com/shekeayatparast/sarzemine-asal-deploy.git
+cd sarzemine-asal-deploy
 sudo bash setup.sh
 # → به‌صورت خودکار از همان پوشه نصب می‌کند
 ```
@@ -36,8 +36,8 @@ sudo bash setup.sh
 ### مرحلهٔ ۲: پاسخ به سؤالات
 
 نصب‌کننده از شما می‌پرسد:
-- **توکن ربات تلگرام** (پیش‌فرض: توکن فعلی شما)
-- **آیدی عددی ادمین تلگرام** (پیش‌فرض: ۵۲۰۷۶۵۳۱۰۴)
+- **توکن ربات تلگرام** (الزامی — از @BotFather بگیرید، با فرمت `123456:AAxxx`)
+- **آیدی عددی ادمین تلگرام** (الزامی — با ارسال /start به @userinfobot پیدا کنید)
 - **دامنه (اختیاری)** — اگر دامنه دارید وارد کنید تا SSL خودکار گرفته شود
 - **ایمیل برای Let's Encrypt** (فقط اگر دامنه وارد کنید)
 
@@ -263,7 +263,6 @@ sudo tar czf ~/sarzemine-backup-$(date +%F).tar.gz \
 ## 📞 اطلاعات تماس
 
 - ربات تلگرام: @MeowAboosBot
-- آیدی ادمین: ۵۲۰۷۶۵۳۱۰۴
 - تلفن: ۰۹۱۴۰۲۰۲۳۲۰
 - شهرکرد، چهارمحال و بختیاری
 
