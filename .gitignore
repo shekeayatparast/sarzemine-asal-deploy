@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────────────
+#  .gitignore for سرزمین عسل deployment repository
+#  Keeps secrets and build artifacts out of GitHub
+# ─────────────────────────────────────────────────────────────────────
+
+# ── Secrets (NEVER commit these) ────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.*.local
+*.pem
+*.key
+
+# ── Build artifacts ─────────────────────────────────────────────────
+project/node_modules/
+project/.next/
+project/out/
+project/build/
+project/dist/
+
+project/mini-services/telegram-bot/node_modules/
+project/mini-services/telegram-bot/.cache/
+
+# ── Database (SQLite) ───────────────────────────────────────────────
+project/db/*.db
+project/db/*.db-shm
+project/db/*.db-wal
+project/db/*.sqlite
+project/db/*.sqlite3
+
+# ── Logs ────────────────────────────────────────────────────────────
+*.log
+bot.log
+dev.log
+server.log
+monitor.log
+logs/
+
+# ── OS files ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ── Editor configs ───────────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ── Testing / coverage ───────────────────────────────────────────────
+coverage/
+.nyc_output/
+test-results/
+
+# ── Previous deployment tarballs ─────────────────────────────────────
+*.tar.gz
+*.tgz
+
+# ── Prisma generated client (regenerated on install) ────────────────
+project/node_modules/.prisma/
+
+# ── Bun cache ───────────────────────────────────────────────────────
+.bun/

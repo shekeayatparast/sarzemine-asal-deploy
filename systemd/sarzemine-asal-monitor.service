@@ -1,0 +1,9 @@
+[Unit]
+Description=Sarzemine Asal — Health Monitor (one-shot)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/sarzemine-asal/monitor.sh
+User=root
+StandardOutput=journal
+StandardError=journal

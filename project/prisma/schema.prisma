@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Honey products (عسل گون، کنار، چند گیاه)
+model Product {
+  id          String   @id @default(cuid())
+  name        String   // نام محصول
+  slug        String   @unique // gon, konar, multy-plant
+  description String   // توضیحات
+  pricePerKg  Int      // قیمت هر کیلو به تومان
+  color       String   // رنگ عسل
+  origin      String   // منطقه جمع‌آوری
+  benefits    String   // خواص (متن)
+  image       String?  // تصویر محصول
+  featured    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Orders (سفارشات مشتریان)
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique // شماره سفارش یکتا مثل HN-10245
+  customerName    String      // نام مشتری
+  customerPhone   String      // شماره تماس
+  province        String      // استان
+  city            String      // شهر
+  address         String?     // آدرس (اختیاری در زمان سفارش)
+  totalAmount     Int         // مبلغ کل کالاها به تومان
+  uniqueAmount    Int         // مبلغ یکتای اضافه (۱ تا ۹۹۹ تومان)
+  finalAmount     Int         // مبلغ نهایی قابل پرداخت (ریال = finalAmount*10)
+  paymentStatus   String      @default("pending") // pending | confirmed
+  orderStatus     String      @default("awaiting_payment") // awaiting_payment | paid | confirmed | preparing | shipped | delivered | cancelled
+  deliveryType    String      // shahrekord (رایگان) | post (پستی)
+  trackingCode    String?     // کد رهگیری پستی — وقتی سفارش به پست تحویل داده می‌شود
+  notes           String?     // یادداشت مشتری
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+}
+
+// Order items (اقلام هر سفارش)
+model OrderItem {
+  id            String  @id @default(cuid())
+  orderId       String
+  productId     String  // آیدی محصول
+  productName   String  // نام محصول (جهت сохран)
+  containerSize Float   // حجم ظرف: 0.5, 1, 2, 3, 4, 25
+  hasWax        Boolean @default(false) // با موم یا بدون موم (فقط ۱ کیلویی)
+  isWholesale   Boolean @default(false) // عمده (حلب ۲۵ کیلو)
+  quantity      Int     // تعداد
+  unitPrice     Int     // قیمت هر واحد ظرف به تومان
+  total         Int     // جمع این قلم به تومان
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}

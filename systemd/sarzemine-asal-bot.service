@@ -1,0 +1,24 @@
+[Unit]
+Description=Sarzemine Asal — Telegram Admin Bot
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sarzemine
+Group=sarzemine
+WorkingDirectory=/opt/sarzemine-asal/mini-services/telegram-bot
+EnvironmentFile=/opt/sarzemine-asal/.env
+ExecStart=/home/sarzemine/.bun/bin/bun run start
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sarzemine-bot
+
+# Graceful shutdown
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

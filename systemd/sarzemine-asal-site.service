@@ -1,0 +1,24 @@
+[Unit]
+Description=Sarzemine Asal — Honey Shop Website (Next.js)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sarzemine
+Group=sarzemine
+WorkingDirectory=/opt/sarzemine-asal
+EnvironmentFile=/opt/sarzemine-asal/.env
+ExecStart=/home/sarzemine/.bun/bin/bun run start
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sarzemine-site
+
+# Graceful shutdown
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
