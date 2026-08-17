@@ -231,7 +231,7 @@ info "Installing build tools and certificates..."
 apt-get install -y -qq \
   curl git build-essential python3 \
   ca-certificates gnupg \
-  sqlite3 jq >/dev/null
+  sqlite3 jq rsync >/dev/null
 
 ok "System packages installed"
 
@@ -296,7 +296,13 @@ if [[ "$DEPLOY_MODE" == "github" ]]; then
       die "git clone failed. Check the repo URL and your server's access to GitHub."
     fi
     # Move cloned files to install dir (preserves any existing .env, db)
-    rsync -a "$TMP_CLONE/" "$INSTALL_DIR/"
+    if command -v rsync &>/dev/null; then
+      rsync -a "$TMP_CLONE/" "$INSTALL_DIR/"
+    else
+      # Fallback: cp -r when rsync not installed
+      warn "rsync not available — using cp fallback"
+      cp -r "$TMP_CLONE/." "$INSTALL_DIR/" 2>/dev/null || true
+    fi
     rm -rf "$TMP_CLONE"
     ok "Repo cloned successfully"
 
@@ -311,16 +317,33 @@ if [[ "$DEPLOY_MODE" == "github" ]]; then
 else
   # ── Local mode: copy the bundled project/ folder ──
   info "Copying local project files to $INSTALL_DIR..."
-  rsync -a --delete \
-    --exclude='node_modules' \
-    --exclude='.next' \
-    --exclude='db/*.db' \
-    --exclude='db/*.db-shm' \
-    --exclude='db/*.db-wal' \
-    --exclude='dev.log' \
-    --exclude='server.log' \
-    --exclude='.env' \
-    "$PROJECT_SRC/" "$INSTALL_DIR/"
+  if command -v rsync &>/dev/null; then
+    rsync -a --delete \
+      --exclude='node_modules' \
+      --exclude='.next' \
+      --exclude='db/*.db' \
+      --exclude='db/*.db-shm' \
+      --exclude='db/*.db-wal' \
+      --exclude='dev.log' \
+      --exclude='server.log' \
+      --exclude='.env' \
+      "$PROJECT_SRC/" "$INSTALL_DIR/"
+  else
+    # Fallback: cp -r with manual exclusions (rsync not installed)
+    warn "rsync not available — using cp fallback"
+    mkdir -p "$INSTALL_DIR"
+    # Build exclusion pattern for find
+    (cd "$PROJECT_SRC" && find . -type f \
+      ! -path './node_modules/*' \
+      ! -path './.next/*' \
+      ! -path './db/*.db' \
+      ! -path './db/*.db-shm' \
+      ! -path './db/*.db-wal' \
+      ! -name 'dev.log' \
+      ! -name 'server.log' \
+      ! -name '.env' \
+      -print0) | (cd "$PROJECT_SRC" && xargs -0 -I{} install -D "{}" "$INSTALL_DIR/{}")
+  fi
   ok "Local project files copied"
 
   warn "Local mode: update.sh will not work (no git history)."
