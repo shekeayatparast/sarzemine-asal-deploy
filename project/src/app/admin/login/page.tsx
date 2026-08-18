@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +25,6 @@ import {
 } from "lucide-react";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -57,8 +55,11 @@ export default function AdminLoginPage() {
       toast.success("ورود با موفقیت انجام شد", {
         description: "در حال انتقال به داشبورد مدیریت...",
       });
-      router.push("/admin");
-      router.refresh();
+      // Use full-page navigation (not client-side router) so the new
+      // session cookie is guaranteed to be sent with the request and
+      // no race condition between router.push + router.refresh can leave
+      // the user stuck on the login page.
+      window.location.assign("/admin");
     } catch (err) {
       console.error("[admin login] error:", err);
       toast.error("خطای شبکه. لطفاً دوباره تلاش کنید.");

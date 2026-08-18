@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +26,6 @@ import {
 import { toPersianDigits } from "@/lib/format";
 
 export default function AgentLoginPage() {
-  const router = useRouter();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -60,16 +58,16 @@ export default function AgentLoginPage() {
           description:
             "حساب شما در انتظار تأیید مدیر است. پس از تأیید به پنل دسترسی خواهید داشت.",
         });
-        router.push("/agent");
-        router.refresh();
+        // Full-page navigation: avoids race between router.push + router.refresh
+        // and guarantees the freshly-set session cookie is sent with the request.
+        window.location.assign("/agent");
         return;
       }
 
       toast.success("ورود با موفقیت انجام شد", {
         description: "در حال انتقال به داشبورد...",
       });
-      router.push("/agent");
-      router.refresh();
+      window.location.assign("/agent");
     } catch (err) {
       console.error("[agent login] error:", err);
       toast.error("خطای شبکه. لطفاً دوباره تلاش کنید.");

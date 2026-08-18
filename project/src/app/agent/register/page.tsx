@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, FormEvent, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +38,6 @@ import {
 import { toPersianDigits } from "@/lib/format";
 
 export default function AgentRegisterPage() {
-  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -121,8 +119,8 @@ export default function AgentRegisterPage() {
         description:
           "در انتظار تأیید مدیر. پس از تأیید، به پنل دسترسی خواهید داشت.",
       });
-      router.push("/agent");
-      router.refresh();
+      // Full-page navigation so the new session cookie is sent reliably.
+      window.location.assign("/agent");
     } catch (err) {
       console.error("[agent register] error:", err);
       toast.error("خطای شبکه. لطفاً دوباره تلاش کنید.");

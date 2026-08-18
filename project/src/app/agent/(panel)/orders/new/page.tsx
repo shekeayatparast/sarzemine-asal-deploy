@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +67,6 @@ interface AgentProfile {
 }
 
 export default function NewOrderPage() {
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [profile, setProfile] = useState<AgentProfile | null>(null);
@@ -252,8 +250,8 @@ export default function NewOrderPage() {
         description: `شماره سفارش: ${data.order.orderNumber}`,
       });
       clearCart();
-      router.push("/agent/orders");
-      router.refresh();
+      // Full-page navigation: the order list page must show the new order.
+      window.location.assign("/agent/orders");
     } catch (err) {
       console.error("[agent/orders/new] submit error:", err);
       toast.error("خطای شبکه. لطفاً دوباره تلاش کنید.");
