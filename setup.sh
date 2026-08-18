@@ -428,6 +428,15 @@ info "Seeding products..."
 sudo -u "$SERVICE_USER" -H bash -c "cd '$INSTALL_DIR' && DATABASE_URL='file:$INSTALL_DIR/db/custom.db' '$BUN_BIN' run db:seed" 2>&1 | tail -5
 ok "Products seeded"
 
+# Seed default admin user for the admin panel
+# Default credentials: admin / admin12345
+# Can be overridden via env vars ADMIN_USERNAME / ADMIN_PASSWORD (set before running setup.sh)
+info "Seeding default admin user..."
+DEFAULT_ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
+DEFAULT_ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin12345}"
+sudo -u "$SERVICE_USER" -H bash -c "cd '$INSTALL_DIR' && DATABASE_URL='file:$INSTALL_DIR/db/custom.db' ADMIN_USERNAME='$DEFAULT_ADMIN_USERNAME' ADMIN_PASSWORD='$DEFAULT_ADMIN_PASSWORD' '$BUN_BIN' run db:seed-admin" 2>&1 | tail -5
+ok "Admin user seeded (username: $DEFAULT_ADMIN_USERNAME)"
+
 # Install bot dependencies
 info "Installing bot dependencies..."
 sudo -u "$SERVICE_USER" -H bash -c "cd '$INSTALL_DIR/mini-services/telegram-bot' && '$BUN_BIN' install" 2>&1 | tail -3
@@ -630,6 +639,25 @@ echo ""
 echo -e "  ${BOLD}Bot:${NC}"
 echo -e "    Telegram: @MeowAboosBot"
 echo -e "    Health:   http://localhost:$BOT_PORT/health"
+echo ""
+echo -e "  ${BOLD}Admin Panel (مدیریت):${NC}"
+if [[ -n "$DOMAIN" ]]; then
+  echo -e "    https://$DOMAIN/admin/login"
+else
+  echo -e "    http://localhost:$SITE_PORT/admin/login"
+fi
+echo -e "    Username: $DEFAULT_ADMIN_USERNAME"
+echo -e "    Password: $DEFAULT_ADMIN_PASSWORD ${YELLOW}(change after first login)${NC}"
+echo ""
+echo -e "  ${BOLD}Agent Panel (نمایندگان فروش):${NC}"
+if [[ -n "$DOMAIN" ]]; then
+  echo -e "    Register: https://$DOMAIN/agent/register"
+  echo -e "    Login:    https://$DOMAIN/agent/login"
+else
+  echo -e "    Register: http://localhost:$SITE_PORT/agent/register"
+  echo -e "    Login:    http://localhost:$SITE_PORT/agent/login"
+fi
+echo -e "    ${YELLOW}(agents register themselves; admin approves them)${NC}"
 echo ""
 echo -e "  ${BOLD}Services:${NC}"
 echo -e "    systemctl status sarzemine-asal-site"

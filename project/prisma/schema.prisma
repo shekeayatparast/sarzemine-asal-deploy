@@ -26,7 +26,65 @@ model Product {
   updatedAt   DateTime @updatedAt
 }
 
-// Orders (سفارشات مشتریان)
+// Sales agents / representatives (نمایندگان فروش)
+// An agent is an approved reseller who can place wholesale orders through
+// their dedicated panel. Their orders are tagged with agentId for reporting.
+model Agent {
+  id             String   @id @default(cuid())
+  name           String   // نام و نام خانوادگی نماینده
+  phone          String   @unique // شماره موبایل (برای ورود)
+  passwordHash   String   // هش رمز عبور (bcrypt)
+  storeName      String   // نام فروشگاه / مغازه
+  province       String   // استان
+  city           String   // شهر
+  address        String   // آدرس کامل
+  nationalId    String?  // کد ملی (اختیاری)
+  status         String   @default("pending") // pending | active | blocked | rejected
+  commissionRate Int      @default(10) // درصد پورسانت (۰ تا ۱۰۰)
+  balance        Int      @default(0) // موجودی حساب نماینده به تومان
+  totalSales     Int      @default(0) // مجموع فروش تا الان (toman)
+  totalOrders    Int      @default(0) // تعداد سفارش‌ها تا الان
+  rejectionReason String? // دلیل رد در صورت rejected
+  approvedAt     DateTime? // زمان تأیید
+  approvedById   String?  // آیدی ادمینی که تأیید کرده
+  approvedBy     Admin?   @relation("AdminApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  lastLoginAt    DateTime? // آخرین ورود
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  orders         Order[]   // سفارش‌های این نماینده
+  payments       AgentPayment[] // تراکنش‌های مالی (پورسانت/پرداخت)
+  sessions       AgentSession[] // توکن‌های ورود
+}
+
+// Agent auth sessions (for JWT-like tokens stored in DB)
+// This allows us to revoke tokens by deleting the session row.
+model AgentSession {
+  id        String   @id @default(cuid())
+  agentId   String
+  token     String   @unique // random secure token
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+}
+
+// Admin users (panel admin) — manages agents + sees reports
+// On first install, an admin is auto-created from env vars (ADMIN_USERNAME/ADMIN_PASSWORD_HASH).
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique // نام کاربری برای ورود
+  passwordHash String   // هش رمز عبور (bcrypt)
+  name         String   // نام نمایشی
+  role         String   @default("admin") // admin | super_admin
+  active       Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  approvedAgents Agent[] @relation("AdminApprover") // نماینده‌هایی که این ادمین تأیید کرده
+}
+
+// Orders (سفارشات مشتریان و نماینده‌ها)
 model Order {
   id              String      @id @default(cuid())
   orderNumber     String      @unique // شماره سفارش یکتا مثل HN-10245
@@ -43,9 +101,16 @@ model Order {
   deliveryType    String      // shahrekord (رایگان) | post (پستی)
   trackingCode    String?     // کد رهگیری پستی — وقتی سفارش به پست تحویل داده می‌شود
   notes           String?     // یادداشت مشتری
+  // Agent linkage: null = regular customer order, set = agent-placed order
+  agentId         String?     // آیدی نماینده (در صورت سفارش از پنل نمایندگی)
+  orderType       String      @default("customer") // customer | agent
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   items           OrderItem[]
+  agent           Agent?      @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([agentId])
+  @@index([orderType])
 }
 
 // Order items (اقلام هر سفارش)
@@ -61,4 +126,19 @@ model OrderItem {
   unitPrice     Int     // قیمت هر واحد ظرف به تومان
   total         Int     // جمع این قلم به تومان
   order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// Agent payments — track financial transactions for agents
+// (commissions earned, payments sent to agent, etc.)
+model AgentPayment {
+  id          String   @id @default(cuid())
+  agentId     String
+  amount      Int      // مبلغ به تومان (مثبت = بدهی ما به نماینده، منفی = کسر از موجودی)
+  type        String   // commission | payment_out | adjustment | bonus
+  description String?  // توضیح تراکنش
+  orderId     String?  // اگه مربوط به سفارش خاصیه
+  createdAt   DateTime @default(now())
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
 }

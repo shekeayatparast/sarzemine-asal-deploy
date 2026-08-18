@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useNav, useCart } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { Menu, ShoppingBasket } from "lucide-react";
+import { Menu, ShoppingBasket, UserCircle, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toPersianDigits } from "@/lib/format";
 import Image from "next/image";
@@ -93,8 +94,28 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Cart + mobile menu */}
+          {/* Cart + Panel links + mobile menu */}
           <div className="flex items-center gap-2">
+            {/* Agent panel link */}
+            <Link
+              href="/agent"
+              className="hidden sm:flex items-center gap-1.5 px-3 h-11 rounded-full border border-honey/30 text-honey-dark hover:bg-honey/10 hover:border-honey/50 transition-all text-sm font-medium"
+              title="پنل نمایندگان فروش"
+            >
+              <UserCircle className="w-4 h-4" />
+              <span>پنل نماینده</span>
+            </Link>
+
+            {/* Admin panel link */}
+            <Link
+              href="/admin"
+              className="hidden sm:flex items-center gap-1.5 px-3 h-11 rounded-full border border-honey/30 text-honey-dark hover:bg-honey/10 hover:border-honey/50 transition-all text-sm font-medium"
+              title="پنل مدیریت"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>پنل مدیریت</span>
+            </Link>
+
             <Button
               onClick={() => go("cart")}
               variant={view === "cart" ? "default" : "outline"}
@@ -154,6 +175,21 @@ export function Header() {
                       {item.label}
                     </Button>
                   ))}
+                  <div className="my-3 border-t" />
+                  <Link
+                    href="/agent"
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-md hover:bg-accent text-sm font-medium text-honey-dark"
+                  >
+                    <UserCircle className="w-4 h-4" />
+                    پنل نماینده
+                  </Link>
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-md hover:bg-accent text-sm font-medium text-honey-dark"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    پنل مدیریت
+                  </Link>
                 </div>
               </SheetContent>
             </Sheet>
