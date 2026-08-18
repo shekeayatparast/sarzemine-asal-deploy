@@ -35,7 +35,7 @@ import {
   Loader2,
   LogIn,
 } from "lucide-react";
-import { toPersianDigits } from "@/lib/format";
+import { toPersianDigits, isValidIranPhone } from "@/lib/format";
 
 export default function AgentRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +65,7 @@ export default function AgentRegisterPage() {
 
   const validate = (): string | null => {
     if (name.trim().length < 3) return "نام باید حداقل ۳ کاراکتر باشد";
-    if (!/^09\d{9}$/.test(phone.trim()))
+    if (!isValidIranPhone(phone.trim()))
       return "شماره موبایل نامعتبر است (مثال: 09123456789)";
     if (password.length < 6)
       return "رمز عبور باید حداقل ۶ کاراکتر باشد";
@@ -79,8 +79,15 @@ export default function AgentRegisterPage() {
     if (!city) return "شهر را انتخاب کنید";
     if (address.trim().length < 5)
       return "آدرس باید حداقل ۵ کاراکتر باشد";
-    if (nationalId.trim() && !/^\d{10}$/.test(nationalId.trim()))
-      return "کد ملی باید ۱۰ رقم باشد";
+    if (nationalId.trim()) {
+      // Convert Persian digits before checking national id format
+      const normalizedId = nationalId
+        .trim()
+        .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+        .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+      if (!/^\d{10}$/.test(normalizedId))
+        return "کد ملی باید ۱۰ رقم باشد";
+    }
     return null;
   };
 

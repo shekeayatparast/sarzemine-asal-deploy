@@ -131,3 +131,52 @@ export function currentJalaliYear(): string {
     year: "numeric",
   }).format(new Date());
 }
+
+// ── Iranian mobile phone helpers (client-safe) ────────────────────────
+// These are used by both server (auth.ts) and client (register/login pages)
+// so they must NOT import any server-only modules (next/headers, db, etc.).
+
+const FA_DIGITS_ARR = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+const AR_DIGITS_ARR = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+
+/** Convert Persian (۰-۹) and Arabic-Indic (٠-٩) digits to ASCII 0-9. */
+export function persianToEnglishDigits(s: string): string {
+  let out = s;
+  for (let i = 0; i < 10; i++) {
+    out = out.replace(new RegExp(FA_DIGITS_ARR[i], "g"), String(i));
+    out = out.replace(new RegExp(AR_DIGITS_ARR[i], "g"), String(i));
+  }
+  return out;
+}
+
+/**
+ * Normalize an Iranian mobile number to the canonical `09123456789` form.
+ * Accepts Persian/Arabic digits, spaces, dashes, parentheses, and the
+ * country code (+98 / 0098). Returns the raw string (stripped of non-digits)
+ * if it doesn't match any known prefix.
+ */
+export function normalizeIranPhone(phone: string): string {
+  const normalized = persianToEnglishDigits(
+    phone.replace(/[\s\-()]/g, "")
+  );
+  if (normalized.startsWith("+98")) return "0" + normalized.slice(3);
+  if (normalized.startsWith("0098")) return "0" + normalized.slice(4);
+  return normalized;
+}
+
+/**
+ * Validate an Iranian mobile number. Accepts:
+ *  - 09123456789      (11 digits starting with 09)
+ *  - +989123456789    (country code + 10 digits)
+ *  - 00989123456789   (double-zero country code)
+ * Both Persian and Arabic-Indic digits are accepted.
+ */
+export function isValidIranPhone(phone: string): boolean {
+  const normalized = persianToEnglishDigits(
+    phone.replace(/[\s\-()]/g, "")
+  );
+  if (/^09\d{9}$/.test(normalized)) return true;
+  if (/^\+989\d{9}$/.test(normalized)) return true;
+  if (/^00989\d{9}$/.test(normalized)) return true;
+  return false;
+}

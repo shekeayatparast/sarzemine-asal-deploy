@@ -6,6 +6,15 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import * as crypto from "crypto";
+// Re-export phone helpers from the client-safe format module so that
+// callers can import them from "@/lib/auth" without caring where they live.
+// The actual implementation lives in format.ts (which has no server-only
+// imports) so that client components can also import the same helpers.
+export {
+  isValidIranPhone,
+  normalizeIranPhone,
+  persianToEnglishDigits,
+} from "@/lib/format";
 
 // ── Constants ────────────────────────────────────────────────────────
 const BCRYPT_ROUNDS = 10;
@@ -242,23 +251,9 @@ export function getSessionCookieName(): string {
   return SESSION_COOKIE_NAME;
 }
 
-// ── Phone validation (Iranian mobile) ────────────────────────────────
-export function isValidIranPhone(phone: string): boolean {
-  // Iranian mobile: 09123456789 (11 digits starting with 09)
-  // Or with country code: +989123456789
-  const normalized = phone.replace(/[\s\-()]/g, "");
-  if (/^09\d{9}$/.test(normalized)) return true;
-  if (/^\+989\d{9}$/.test(normalized)) return true;
-  if (/^00989\d{9}$/.test(normalized)) return true;
-  return false;
-}
-
-export function normalizeIranPhone(phone: string): string {
-  const normalized = phone.replace(/[\s\-()]/g, "");
-  if (normalized.startsWith("+98")) return "0" + normalized.slice(3);
-  if (normalized.startsWith("0098")) return "0" + normalized.slice(4);
-  return normalized;
-}
+// NOTE: phone validation helpers (isValidIranPhone, normalizeIranPhone,
+// persianToEnglishDigits) are re-exported from "@/lib/format" at the top
+// of this file. They live there so client components can also import them.
 
 // ── Password strength validation ──────────────────────────────────────
 export function isStrongPassword(pwd: string): { ok: boolean; reason?: string } {

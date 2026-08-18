@@ -328,16 +328,23 @@ function OrderCard({ order }: { order: OrderWithItems }) {
   );
 }
 
-export function TrackOrdersView() {
+export function TrackOrdersView({
+  initialOrderNumber,
+  initialPhone,
+}: {
+  initialOrderNumber?: string;
+  initialPhone?: string;
+} = {}) {
   const { navigate } = useNav();
-  const [phone, setPhone] = useState("");
-  const [orderNumber, setOrderNumber] = useState("");
+  const [phone, setPhone] = useState(initialPhone || "");
+  const [orderNumber, setOrderNumber] = useState(initialOrderNumber || "");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searched, setSearched] = useState(false);
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoSearchedRef = useRef(false);
 
   // Build the search params from current inputs (with cache-buster).
   const buildParams = useCallback(() => {
@@ -412,6 +419,15 @@ export function TrackOrdersView() {
 
   const search = () => doSearch(false);
   const refresh = () => doSearch(true);
+
+  // Auto-search on mount if initial values were passed (e.g. /track?orderNumber=HN-12345)
+  useEffect(() => {
+    if (autoSearchedRef.current) return;
+    if ((initialOrderNumber || "").trim() || (initialPhone || "").trim()) {
+      autoSearchedRef.current = true;
+      doSearch(false);
+    }
+  }, []);
 
   // Auto-poll every 15 seconds while results are displayed so the customer
   // sees admin status changes in real time without manually re-searching.
