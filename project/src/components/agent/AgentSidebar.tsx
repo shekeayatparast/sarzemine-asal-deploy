@@ -31,6 +31,13 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   const isActive = (href: string) => {
     if (href === "/agent") return pathname === "/agent";
+    // Special case: /agent/orders is a "list" page — don't let sub-paths
+    // like /agent/orders/new (سفارش جدید) or /agent/orders/[id] (جزئیات)
+    // activate this link, otherwise both "سفارش جدید" and "تاریخچه
+    // سفارشات" light up at the same time. Exact-match only.
+    if (href === "/agent/orders") return pathname === "/agent/orders";
+    // For other routes (e.g. /agent/profile), prefix-match is fine since
+    // there are no sibling sub-paths that should be mutually exclusive.
     return pathname === href || pathname.startsWith(href + "/");
   };
 

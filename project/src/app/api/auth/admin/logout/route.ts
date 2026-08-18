@@ -7,6 +7,11 @@
 // Instead we return an HTTP 303 (See Other) redirect — this is the standard
 // PRG (Post/Redirect/Get) pattern: the browser follows the redirect with a
 // GET request to /admin/login, so the user sees the login page, not JSON.
+//
+// We use a relative Location header so the redirect works correctly behind
+// reverse proxies (Caddy/gateway) — using new URL("/admin/login", req.url)
+// would produce localhost:3000 which is the internal address, not the
+// public-facing domain the user expects.
 
 import { NextRequest, NextResponse } from "next/server";
 import { clearSessionCookie } from "@/lib/auth";
@@ -19,7 +24,11 @@ export async function POST(req: NextRequest) {
     // Even on error, clear the cookie so the client logs out
     await clearSessionCookie().catch(() => {});
   }
-  // 303 See Other → browser follows with GET to /admin/login
-  const loginUrl = new URL("/admin/login", req.url);
-  return NextResponse.redirect(loginUrl, 303);
+  // 303 See Other with a RELATIVE Location — the browser resolves it
+  // against the current page URL (the public-facing domain), avoiding
+  // the "localhost:3000" issue when behind a gateway/proxy.
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: "/admin/login" },
+  });
 }

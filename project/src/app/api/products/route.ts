@@ -16,10 +16,35 @@ const NO_CACHE_HEADERS = {
 };
 
 // GET /api/products — list all honey products
+//
+// This endpoint is consumed by the PUBLIC customer site (ProductsView,
+// AddToCartDialog, HomeView) and the AGENT new-order page (which needs to
+// know the agent price for dual pricing).
+//
+// Per B11: stockKg must NEVER be exposed to customers or agents — only the
+// admin API returns it. We select a curated set of fields here.
 export async function GET() {
   try {
     const products = await db.product.findMany({
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ featured: "desc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        benefits: true,
+        pricePerKg: true,
+        agentPricePerKg: true,
+        color: true,
+        origin: true,
+        image: true,
+        featured: true,
+        createdAt: true,
+        updatedAt: true,
+        // NOTE: stockKg is intentionally omitted (B11 — capacity must
+        // not be exposed to customers/agents). The admin API at
+        // /api/admin/products returns the full row including stock.
+      },
     });
     return NextResponse.json({ products }, { headers: NO_CACHE_HEADERS });
   } catch (e) {

@@ -5,6 +5,10 @@
 // (action="/api/auth/agent/logout" method="POST"). Returning JSON would show
 // the raw body ("true") to the user. Instead we return HTTP 303 (See Other),
 // the standard PRG pattern: browser follows with a GET to /agent/login.
+//
+// We use a relative Location header so the redirect works behind reverse
+// proxies (Caddy/gateway) — new URL("/agent/login", req.url) would produce
+// localhost:3000 (internal), not the public-facing domain.
 
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -25,7 +29,10 @@ export async function POST(req: NextRequest) {
     // Even on error, clear the cookie so the client logs out
     await clearSessionCookie().catch(() => {});
   }
-  // 303 See Other → browser follows with GET to /agent/login
-  const loginUrl = new URL("/agent/login", req.url);
-  return NextResponse.redirect(loginUrl, 303);
+  // 303 See Other with a RELATIVE Location — browser resolves against the
+  // current page URL (public domain), avoiding the localhost:3000 issue.
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: "/agent/login" },
+  });
 }

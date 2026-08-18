@@ -12,18 +12,20 @@ datasource db {
 
 // Honey products (عسل گون، کنار، چند گیاه)
 model Product {
-  id          String   @id @default(cuid())
-  name        String   // نام محصول
-  slug        String   @unique // gon, konar, multy-plant
-  description String   // توضیحات
-  pricePerKg  Int      // قیمت هر کیلو به تومان
-  color       String   // رنگ عسل
-  origin      String   // منطقه جمع‌آوری
-  benefits    String   // خواص (متن)
-  image       String?  // تصویر محصول
-  featured    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String   // نام محصول
+  slug           String   @unique // gon, konar, multy-plant
+  description    String   // توضیحات
+  pricePerKg     Int      // قیمت هر کیلو به تومان (for regular customers)
+  agentPricePerKg Int     @default(0) // قیمت نماینده (0 = use pricePerKg)
+  stockKg        Float    @default(0) // موجودی انبار به کیلوگرم
+  color          String   // رنگ عسل
+  origin         String   // منطقه جمع‌آوری
+  benefits       String   // خواص (متن)
+  image          String?  // تصویر محصول (مسیر یا data URL)
+  featured       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // Sales agents / representatives (نمایندگان فروش)

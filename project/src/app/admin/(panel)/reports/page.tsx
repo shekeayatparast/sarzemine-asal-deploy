@@ -1,12 +1,14 @@
 import { getCurrentAdmin } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { computeAdminStats } from "@/lib/stats";
-import type { AdminStats } from "@/lib/stats";
+import type { AdminStats, ReportPeriod } from "@/lib/stats";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 import { StatCard } from "@/components/admin/StatCard";
 import { ReportsCharts } from "@/components/admin/ReportsCharts";
 import { DownloadAgentsCsvButton } from "@/components/admin/DownloadAgentsCsvButton";
+import { DownloadReportsPdfButton } from "@/components/admin/DownloadReportsPdfButton";
+import { ReportsPeriodFilter } from "@/components/admin/ReportsPeriodFilter";
 import {
   Card,
   CardHeader,
@@ -35,13 +37,25 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminReportsPage() {
+function parsePeriod(s: string | undefined): ReportPeriod {
+  if (s === "weekly" || s === "monthly" || s === "yearly") return s;
+  return "monthly";
+}
+
+export default async function AdminReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
   const user = await getCurrentAdmin();
   if (!user) redirect("/admin/login");
 
+  const sp = await searchParams;
+  const period = parsePeriod(sp.period);
+
   let stats: AdminStats;
   try {
-    stats = await computeAdminStats();
+    stats = await computeAdminStats({ period });
   } catch (err) {
     console.error("[admin reports] stats error:", err);
     redirect("/admin/login");
@@ -50,17 +64,13 @@ export default async function AdminReportsPage() {
   // Derived metrics
   const totalRevenue = stats.totalRevenue;
   const avgOrderValue =
-    stats.totalOrders > 0 ? Math.round(totalRevenue / stats.totalOrders) : 0;
+    stats.periodOrders > 0
+      ? Math.round(totalRevenue / stats.periodOrders)
+      : 0;
   const activeRate =
     stats.totalAgents > 0
       ? Math.round((stats.activeAgents / stats.totalAgents) * 100)
       : 0;
-  const avgCommissionRate = stats.topAgents.length
-    ? Math.round(
-        stats.topAgents.reduce((s, a) => s + a.totalSales, 0) /
-          stats.topAgents.length
-      )
-    : 0;
 
   const today = formatJalaliDate(new Date());
 
@@ -72,13 +82,22 @@ export default async function AdminReportsPage() {
           <h1 className="text-2xl font-extrabold text-honey-dark flex items-center gap-2">
             <BarChart3 className="w-6 h-6" />
             گزارش‌ها و تحلیل‌ها
+            <span className="text-sm font-normal text-muted-foreground">
+              ({stats.periodLabel})
+            </span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5" />
-            تاریخ گزارش: {today}
+            تاریخ گزارش: {today} • بازه: {formatJalaliDate(stats.periodRangeStart)} تا {formatJalaliDate(stats.periodRangeEnd)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Suspense fallback={null}>
+            <ReportsPeriodFilter />
+          </Suspense>
+          <Suspense fallback={null}>
+            <DownloadReportsPdfButton />
+          </Suspense>
           <DownloadAgentsCsvButton />
           <Button asChild variant="ghost" size="sm">
             <Link href="/admin">
@@ -92,7 +111,7 @@ export default async function AdminReportsPage() {
       {/* Main stat grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="درآمد کل"
+          title={`درآمد ${stats.periodLabel}`}
           value={formatToman(stats.totalRevenue)}
           icon={Coins}
           iconClassName="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
@@ -111,7 +130,7 @@ export default async function AdminReportsPage() {
           value={formatToman(avgOrderValue)}
           icon={ShoppingCart}
           iconClassName="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-          hint={`${toPersianDigits(stats.totalOrders)} سفارش کل`}
+          hint={`${toPersianDigits(stats.periodOrders)} سفارش در دوره • ${toPersianDigits(stats.totalOrders)} سفارش کل`}
         />
         <StatCard
           title="پورسانت پرداختی"
@@ -163,6 +182,9 @@ export default async function AdminReportsPage() {
         thisWeekRevenue={stats.thisWeekRevenue}
         weekGrowthPct={stats.weekGrowthPct}
         monthGrowthPct={stats.monthGrowthPct}
+        weeklySeriesLabel={stats.weeklySeriesLabel}
+        monthlySeriesLabel={stats.monthlySeriesLabel}
+        periodLabel={stats.periodLabel}
       />
 
       {/* Top products table */}
@@ -173,7 +195,7 @@ export default async function AdminReportsPage() {
             جزئیات پرفروش‌ترین محصولات
           </CardTitle>
           <CardDescription>
-            ۵ محصول برتر بر اساس تعداد و درآمد
+            ۵ محصول برتر در دوره {stats.periodLabel.toLowerCase()} بر اساس تعداد و درآمد
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0">

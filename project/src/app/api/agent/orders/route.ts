@@ -5,7 +5,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentAgent } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { generateOrderNumber, generateUniqueAmount } from "@/lib/format";
+import {
+  generateOrderNumber,
+  generateUniqueAmount,
+  toPersianDigits,
+} from "@/lib/format";
 import { FREE_DELIVERY_CITY } from "@/lib/products";
 import { notifyBotNewOrder } from "@/lib/notify-bot";
 import { PROVINCES } from "@/lib/locations";
@@ -108,7 +112,7 @@ export async function POST(req: NextRequest) {
     const productIds = [...new Set(data.items.map((i) => i.productId))];
     const dbProducts = await db.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, name: true, pricePerKg: true },
+      select: { id: true, name: true, pricePerKg: true, agentPricePerKg: true, stockKg: true },
     });
     const productMap = new Map(dbProducts.map((p) => [p.id, p]));
 
@@ -118,7 +122,12 @@ export async function POST(req: NextRequest) {
       if (!p) {
         throw new Error(`محصول یافت نشد: ${item.productId}`);
       }
-      const unitPrice = Math.round(p.pricePerKg * item.containerSize);
+      // ── B14: Dual pricing ──────────────────────────────────────────
+      // Use agentPricePerKg if it's set (>0); otherwise fall back to the
+      // regular customer pricePerKg.
+      const effectivePricePerKg =
+        p.agentPricePerKg > 0 ? p.agentPricePerKg : p.pricePerKg;
+      const unitPrice = Math.round(effectivePricePerKg * item.containerSize);
       const itemTotal = unitPrice * item.quantity;
       totalAmount += itemTotal;
       return {
@@ -133,33 +142,77 @@ export async function POST(req: NextRequest) {
       };
     });
 
+    // ── B11: Stock validation ──────────────────────────────────────────
+    // Aggregate requested kg per product, then compare against live stock.
+    // We DO NOT expose the stock value to the agent up-front (per task);
+    // but we DO validate here and return a clear Persian message that tells
+    // them how much is available if they exceed it.
+    const requestedKgByProduct = new Map<string, number>();
+    for (const item of data.items) {
+      const kg = item.containerSize * item.quantity;
+      requestedKgByProduct.set(
+        item.productId,
+        (requestedKgByProduct.get(item.productId) ?? 0) + kg
+      );
+    }
+    for (const [productId, requestedKg] of requestedKgByProduct) {
+      const p = productMap.get(productId);
+      if (!p) continue;
+      if (requestedKg > p.stockKg + 0.001) {
+        return NextResponse.json(
+          {
+            error: `موجودی کافی نیست: ${p.name} — موجودی فعلی: ${toPersianDigits(
+              p.stockKg.toFixed(2).replace(/\.?0+$/, "")
+            )} کیلو، درخواست شما: ${toPersianDigits(
+              requestedKg.toFixed(2).replace(/\.?0+$/, "")
+            )} کیلو. لطفاً سفارش خود را تنظیم کنید.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Determine delivery type
     const deliveryType = data.city === FREE_DELIVERY_CITY ? "shahrekord" : "post";
     const uniqueAmount = generateUniqueAmount();
     const finalAmount = totalAmount + uniqueAmount;
     const orderNumber = generateOrderNumber();
 
-    // Create the order
-    const order = await db.order.create({
-      data: {
-        orderNumber,
-        customerName: `${agent.name} (${agent.storeName})`,
-        customerPhone: agent.phone,
-        province: data.province,
-        city: data.city,
-        address: data.address,
-        notes: data.notes || null,
-        totalAmount,
-        uniqueAmount,
-        finalAmount,
-        paymentStatus: "pending",
-        orderStatus: "awaiting_payment",
-        deliveryType,
-        agentId: user.id,
-        orderType: "agent",
-        items: { create: validatedItems },
-      },
-      include: { items: true },
+    // ── B11: Create order + decrement stock atomically ────────────────
+    // Wrap the order insert + stock decrements in a transaction so we can't
+    // end up with stock decremented but no order (or vice versa).
+    const order = await db.$transaction(async (tx) => {
+      const created = await tx.order.create({
+        data: {
+          orderNumber,
+          customerName: `${agent.name} (${agent.storeName})`,
+          customerPhone: agent.phone,
+          province: data.province,
+          city: data.city,
+          address: data.address,
+          notes: data.notes || null,
+          totalAmount,
+          uniqueAmount,
+          finalAmount,
+          paymentStatus: "pending",
+          orderStatus: "awaiting_payment",
+          deliveryType,
+          agentId: user.id,
+          orderType: "agent",
+          items: { create: validatedItems },
+        },
+        include: { items: true },
+      });
+
+      // Decrement stock per unique product
+      for (const [productId, kg] of requestedKgByProduct) {
+        await tx.product.update({
+          where: { id: productId },
+          data: { stockKg: { decrement: kg } },
+        });
+      }
+
+      return created;
     });
 
     // Update agent stats

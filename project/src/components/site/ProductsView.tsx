@@ -34,9 +34,17 @@ export function ProductsView() {
 
   return (
     <div className="bg-cream-gradient min-h-[60vh]">
-      {/* Page header */}
-      <section className="bg-honey-gradient text-primary-foreground py-12 md:py-16">
-        <div className="container mx-auto px-4 text-center">
+      {/* Page header — with background image + overlay, like other sections */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src="/images/honeycomb-texture.png"
+            alt=""
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-l from-honey-dark/90 via-honey-dark/70 to-honey-dark/45" />
+        </div>
+        <div className="relative container mx-auto px-4 py-16 md:py-24 text-center text-primary-foreground">
           <h1 className="text-3xl md:text-5xl font-extrabold mb-3 drop-shadow">
             محصولات سرزمین عسل
           </h1>

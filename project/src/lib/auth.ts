@@ -14,6 +14,7 @@ export {
   isValidIranPhone,
   normalizeIranPhone,
   persianToEnglishDigits,
+  isStrongPassword,
 } from "@/lib/format";
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -252,13 +253,7 @@ export function getSessionCookieName(): string {
 }
 
 // NOTE: phone validation helpers (isValidIranPhone, normalizeIranPhone,
-// persianToEnglishDigits) are re-exported from "@/lib/format" at the top
-// of this file. They live there so client components can also import them.
-
-// ── Password strength validation ──────────────────────────────────────
-export function isStrongPassword(pwd: string): { ok: boolean; reason?: string } {
-  if (pwd.length < 6) return { ok: false, reason: "رمز عبور باید حداقل ۶ کاراکتر باشد" };
-  if (!/\d/.test(pwd)) return { ok: false, reason: "رمز عبور باید حداقل یک عدد داشته باشد" };
-  if (!/[a-zA-Z]/.test(pwd)) return { ok: false, reason: "رمز عبور باید حداقل یک حرف داشته باشد" };
-  return { ok: true };
-}
+// persianToEnglishDigits) and password strength (isStrongPassword) are
+// re-exported from "@/lib/format" at the top of this file. They live there
+// so client components can also import them without pulling in server-only
+// modules (next/headers, db).

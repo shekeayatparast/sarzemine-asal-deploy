@@ -24,11 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgentCart } from "@/lib/agent-cart-store";
-import {
-  CONTAINERS,
-  BONUS_THRESHOLD_KG,
-  BONUS_AMOUNT_KG,
-} from "@/lib/products";
+import { CONTAINERS } from "@/lib/products";
 import { PROVINCES } from "@/lib/locations";
 import {
   containerPrice,
@@ -43,7 +39,6 @@ import {
   Check,
   ShoppingBasket,
   Trash2,
-  Gift,
   MapPin,
   Loader2,
   Send,
@@ -56,6 +51,7 @@ interface Product {
   name: string;
   slug: string;
   pricePerKg: number;
+  agentPricePerKg?: number; // 0 = use pricePerKg (customer price)
   image: string | null;
 }
 
@@ -91,11 +87,9 @@ export default function NewOrderPage() {
   const totalAmount = useAgentCart((s) => s.totalAmount());
   const totalKg = useAgentCart((s) => s.totalKg());
 
-  // Bonus calculation (only for non-wholesale items)
-  const nonWholesaleKg = items
-    .filter((i) => !i.isWholesale)
-    .reduce((s, i) => s + i.containerSize * i.quantity, 0);
-  const bonusKg = Math.floor(nonWholesaleKg / BONUS_THRESHOLD_KG) * BONUS_AMOUNT_KG;
+  // Note: the 0.5kg bonus-per-5kg is a customer-only perk. Agents buy at
+  // wholesale prices and do NOT receive the bonus — so we don't calculate
+  // or display it here at all.
 
   // Load products + profile on mount
   useEffect(() => {
@@ -115,8 +109,10 @@ export default function NewOrderPage() {
         if (profileData.agent) {
           setProfile(profileData.agent);
           setProvince(profileData.agent.province || "");
-          setCity(profileData.agent.city || "");
           setAddress(profileData.agent.address || "");
+          // NOTE: city is set in a separate useEffect below — setting it
+          // here directly was being overridden by Radix Select's internal
+          // item-resolution logic when the cities list updates.
         }
         // Initialize selections with defaults for each product
         if (Array.isArray(prodData.products)) {
@@ -140,11 +136,33 @@ export default function NewOrderPage() {
 
   const cities = PROVINCES.find((p) => p.name === province)?.cities || [];
 
-  // Reset city if province changes
-  useEffect(() => {
-    if (profile && province === profile.province) return; // skip initial
+  // Reset city if user manually changes province — we use an explicit
+  // onChange handler on the province Select (handleProvinceChange) instead
+  // of a useEffect so that the initial profile-load (which sets province +
+  // city together) doesn't trigger a spurious city-clear.
+  // (The old useEffect approach had a race condition that wiped the
+  // city loaded from the agent's profile.)
+
+  const handleProvinceChange = (newProvince: string) => {
+    setProvince(newProvince);
+    // When the USER picks a different province, the old city is no longer
+    // valid — clear it so they pick a city from the new province's list.
     setCity("");
-  }, [province, profile]);
+  };
+
+  // Initialize city from profile AFTER profile + cities are available.
+  // Radix Select has an internal mechanism that resets the value to ""
+  // when the items list changes (from [] to the city list). By setting
+  // city in a separate effect that runs after the items are stable,
+  // we avoid that reset. The `city` dep ensures this only runs once
+  // (when city is still empty after profile loads).
+  useEffect(() => {
+    if (profile?.city && !city) {
+      // Use a microtask delay to let Radix settle its items first
+      const id = setTimeout(() => setCity(profile.city!), 0);
+      return () => clearTimeout(id);
+    }
+  }, [profile, city]);
 
   const handleSizeChange = (productId: string, newSize: number) => {
     setSelections((prev) => {
@@ -184,12 +202,19 @@ export default function NewOrderPage() {
   const handleAddToCart = (product: Product) => {
     const sel = selections[product.id] || { size: 1, hasWax: false, qty: 1 };
     const container = CONTAINERS.find((c) => c.size === sel.size) ?? CONTAINERS[1];
-    const unitPrice = containerPrice(product.pricePerKg, sel.size);
+    // ── B14: Dual pricing ──────────────────────────────────────────────
+    // The agent pays the agentPricePerKg when set (>0); otherwise the
+    // regular customer pricePerKg.
+    const effectivePricePerKg =
+      product.agentPricePerKg && product.agentPricePerKg > 0
+        ? product.agentPricePerKg
+        : product.pricePerKg;
+    const unitPrice = containerPrice(effectivePricePerKg, sel.size);
     addItem({
       productId: product.id,
       productName: product.name,
       productImage: product.image,
-      pricePerKg: product.pricePerKg,
+      pricePerKg: effectivePricePerKg,
       containerSize: sel.size,
       containerLabel: container.label,
       hasWax: container.canWax ? sel.hasWax : false,
@@ -306,8 +331,16 @@ export default function NewOrderPage() {
               };
               const container =
                 CONTAINERS.find((c) => c.size === sel.size) ?? CONTAINERS[1];
+              // ── B14: Dual pricing — show the agent price (when set) ───
+              const hasAgentPrice =
+                product.agentPricePerKg !== undefined &&
+                product.agentPricePerKg > 0 &&
+                product.agentPricePerKg !== product.pricePerKg;
+              const effectivePricePerKg = hasAgentPrice
+                ? product.agentPricePerKg!
+                : product.pricePerKg;
               const unitPrice = containerPrice(
-                product.pricePerKg,
+                effectivePricePerKg,
                 sel.size
               );
               const total = unitPrice * sel.qty;
@@ -326,9 +359,22 @@ export default function NewOrderPage() {
                       <h3 className="font-bold text-base text-foreground">
                         {product.name}
                       </h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        قیمت هر کیلو: {formatToman(product.pricePerKg)}
-                      </p>
+                      <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2">
+                        {hasAgentPrice ? (
+                          <>
+                            <span className="text-honey-dark font-bold">
+                              قیمت نماینده: {formatToman(effectivePricePerKg)}
+                            </span>
+                            <span className="line-through opacity-60">
+                              {formatToman(product.pricePerKg)}
+                            </span>
+                          </>
+                        ) : (
+                          <span>
+                            قیمت هر کیلو: {formatToman(product.pricePerKg)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -524,17 +570,10 @@ export default function NewOrderPage() {
                       </div>
                     ))}
 
-                    {/* Bonus hint */}
-                    {bonusKg > 0 && (
-                      <div className="flex items-start gap-2 rounded-lg bg-honey-light/30 border border-honey/30 p-2.5 text-xs">
-                        <Gift className="w-4 h-4 text-honey-dark shrink-0 mt-0.5" />
-                        <span>
-                          با این خرید{" "}
-                          <b>{toPersianDigits(bonusKg)} کیلو</b> عسل
-                          هدیه دریافت می‌کنید!
-                        </span>
-                      </div>
-                    )}
+                    {/* Note: the 0.5kg bonus honey per 5kg is a CUSTOMER-only
+                        perk. Agents do not receive it — they buy at wholesale
+                        prices, so the bonus hint is intentionally NOT shown
+                        here. */}
 
                     <div className="h-px bg-border my-1" />
                     <div className="flex justify-between items-center font-bold">
@@ -568,7 +607,7 @@ export default function NewOrderPage() {
                     <Label className="text-xs font-bold">استان</Label>
                     <Select
                       value={province}
-                      onValueChange={(v) => setProvince(v)}
+                      onValueChange={handleProvinceChange}
                       disabled={submitting}
                     >
                       <SelectTrigger className="w-full h-9 text-sm">
@@ -591,7 +630,15 @@ export default function NewOrderPage() {
                       disabled={submitting || !province}
                     >
                       <SelectTrigger className="w-full h-9 text-sm">
-                        <SelectValue placeholder="انتخاب" />
+                        {/* Radix Select can't resolve value→label when items
+                            are rendered after the value is set (lazy content).
+                            Render the selected city text ourselves when set,
+                            falling back to SelectValue placeholder otherwise. */}
+                        {city ? (
+                          <span className="truncate">{city}</span>
+                        ) : (
+                          <SelectValue placeholder="انتخاب" />
+                        )}
                       </SelectTrigger>
                       <SelectContent>
                         {cities.map((c) => (

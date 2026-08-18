@@ -22,10 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { AgentStatusManager } from "@/components/admin/AgentStatusManager";
-import {
-  OrderStatusBadge,
-  PaymentStatusBadge,
-} from "@/components/agent/OrderStatusBadge";
+import { AgentOrderHistoryTable } from "@/components/admin/AgentOrderHistoryTable";
 import {
   ArrowRight,
   User,
@@ -71,6 +68,19 @@ export default async function AdminAgentDetailsPage({ params }: PageProps) {
           orderStatus: true,
           paymentStatus: true,
           createdAt: true,
+          items: {
+            select: {
+              id: true,
+              productId: true,
+              productName: true,
+              containerSize: true,
+              hasWax: true,
+              isWholesale: true,
+              quantity: true,
+              unitPrice: true,
+              total: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -300,57 +310,14 @@ export default async function AdminAgentDetailsPage({ params }: PageProps) {
                 تاریخچه سفارش‌ها
               </CardTitle>
               <CardDescription>
-                {toPersianDigits(agent.orders.length)} سفارش اخیر این نماینده
+                {toPersianDigits(agent.orders.length)} سفارش اخیر این نماینده —
+                برای مشاهده جزئیات اقلام هر سفارش روی دکمهٔ «جزئیات» بزنید
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          {agent.orders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-              <ShoppingCart className="w-12 h-12 text-muted-foreground opacity-30" />
-              <p className="text-sm text-muted-foreground">
-                هنوز سفارشی ثبت نکرده است.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>شماره سفارش</TableHead>
-                    <TableHead>تاریخ</TableHead>
-                    <TableHead>مبلغ</TableHead>
-                    <TableHead>پرداخت</TableHead>
-                    <TableHead>وضعیت</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {agent.orders.map((o) => (
-                    <TableRow key={o.id}>
-                      <TableCell>
-                        <span className="font-bold text-honey-dark">
-                          {o.orderNumber}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatJalaliDateTime(o.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-sm font-bold">
-                        {formatToman(o.finalAmount)}
-                      </TableCell>
-                      <TableCell>
-                        <PaymentStatusBadge status={o.paymentStatus} />
-                      </TableCell>
-                      <TableCell>
-                        <OrderStatusBadge status={o.orderStatus} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <AgentOrderHistoryTable orders={agent.orders} />
         </CardContent>
       </Card>
 

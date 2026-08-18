@@ -204,17 +204,17 @@ export default async function AgentDashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>شماره سفارش</TableHead>
-                  <TableHead>تاریخ</TableHead>
-                  <TableHead>مبلغ</TableHead>
-                  <TableHead>وضعیت پرداخت</TableHead>
-                  <TableHead>وضعیت سفارش</TableHead>
+                  <TableHead className="text-right">شماره سفارش</TableHead>
+                  <TableHead className="text-right">تاریخ</TableHead>
+                  <TableHead className="text-left">مبلغ</TableHead>
+                  <TableHead className="text-center">وضعیت پرداخت</TableHead>
+                  <TableHead className="text-center">وضعیت سفارش</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {stats.recentOrders.map((o) => (
-                  <TableRow key={o.id}>
-                    <TableCell>
+                  <TableRow key={o.id} className="hover:bg-amber-50/50 dark:hover:bg-amber-900/10">
+                    <TableCell className="text-right">
                       <Link
                         href={`/agent/orders/${o.id}`}
                         className="font-bold text-honey-dark hover:underline"
@@ -222,19 +222,17 @@ export default async function AgentDashboardPage() {
                         {o.orderNumber}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
                       {formatJalaliDateTime(o.createdAt)}
                     </TableCell>
-                    <TableCell className="font-bold">
+                    <TableCell className="text-left font-bold whitespace-nowrap">
                       {formatToman(o.finalAmount)}
                     </TableCell>
-                    <TableCell>
-                      <PaymentStatusBadge status={o.paymentStatus === "تأیید شده" ? "confirmed" : "pending"} />
+                    <TableCell className="text-center">
+                      <PaymentStatusBadge status={o.paymentStatus} />
                     </TableCell>
-                    <TableCell>
-                      <OrderStatusBadge
-                        status={reverseStatusLabel(o.orderStatus)}
-                      />
+                    <TableCell className="text-center">
+                      <OrderStatusBadge status={o.orderStatus} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -272,18 +270,4 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="font-bold text-foreground">{value}</p>
     </div>
   );
-}
-
-// Reverse the Persian label back to the status key for the badge
-function reverseStatusLabel(label: string): string {
-  const map: Record<string, string> = {
-    "در انتظار پرداخت": "awaiting_payment",
-    "پرداخت شده": "paid",
-    "تأیید شده": "confirmed",
-    "در حال آماده‌سازی": "preparing",
-    "ارسال شده": "shipped",
-    "تحویل داده شده": "delivered",
-    "لغو شده": "cancelled",
-  };
-  return map[label] ?? label;
 }

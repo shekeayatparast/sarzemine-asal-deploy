@@ -92,6 +92,9 @@ interface ReportsChartsProps {
   thisWeekRevenue: number;
   weekGrowthPct: number | null;
   monthGrowthPct: number | null;
+  weeklySeriesLabel?: string;
+  monthlySeriesLabel?: string;
+  periodLabel?: string;
 }
 
 export function ReportsCharts({
@@ -102,7 +105,13 @@ export function ReportsCharts({
   topProducts,
   agentRevenue,
   customerRevenue,
+  weeklySeriesLabel,
+  monthlySeriesLabel,
+  periodLabel,
 }: ReportsChartsProps) {
+  const weeklyTitle = weeklySeriesLabel || "روند درآمد هفتگی";
+  const monthlyTitle = monthlySeriesLabel || "مقایسه درآمد ماهانه";
+  const periodSuffix = periodLabel ? ` (دوره ${periodLabel.toLowerCase()})` : "";
   const statusColors = orderStatusDistribution.map(
     (_, i) => HONEY_PALETTE[i % HONEY_PALETTE.length]
   );
@@ -148,10 +157,10 @@ export function ReportsCharts({
         <CardHeader className="px-0">
           <CardTitle className="flex items-center gap-2 text-base font-bold">
             <TrendingUp className="w-5 h-5 text-honey-dark" />
-            روند درآمد هفتگی
+            {weeklyTitle}
           </CardTitle>
           <CardDescription>
-            درآمد تأیید شده هشت هفته گذشته (تومان) — با ناحیه رنگی
+            درآمد تأیید شده در بازه انتخاب‌شده{periodSuffix} — با ناحیه رنگی
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0">
@@ -209,10 +218,10 @@ export function ReportsCharts({
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-2 text-base font-bold">
               <Layers className="w-5 h-5 text-honey-dark" />
-              مقایسه درآمد نماینده/مشتری
+              {monthlyTitle}
             </CardTitle>
             <CardDescription>
-              تفکیک درآمد ماهانه بر اساس نوع سفارش
+              تفکیک درآمد بر اساس نوع سفارش{periodSuffix}
             </CardDescription>
           </CardHeader>
           <CardContent className="px-0">
@@ -274,10 +283,10 @@ export function ReportsCharts({
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-2 text-base font-bold">
               <PieIcon className="w-5 h-5 text-honey-dark" />
-              سهم درآمد نماینده‌ها و مشتریان
+              سهم درآمد نماینده‌ها و مشتریان{periodSuffix}
             </CardTitle>
             <CardDescription>
-              سهم کل درآمد تأیید شده بر اساس نوع
+              سهم درآمد تأیید شده بر اساس نوع سفارش
             </CardDescription>
           </CardHeader>
           <CardContent className="px-0">
@@ -332,9 +341,9 @@ export function ReportsCharts({
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-2 text-base font-bold">
               <PieIcon className="w-5 h-5 text-honey-dark" />
-              توزیع وضعیت سفارش‌ها
+              توزیع وضعیت سفارش‌ها{periodSuffix}
             </CardTitle>
-            <CardDescription>بر اساس وضعیت فعلی همه سفارش‌ها</CardDescription>
+            <CardDescription>بر اساس وضعیت فعلی سفارش‌های بازه انتخاب‌شده</CardDescription>
           </CardHeader>
           <CardContent className="px-0">
             {orderStatusDistribution.length === 0 ? (
@@ -390,7 +399,7 @@ export function ReportsCharts({
           <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-2 text-base font-bold">
               <BarChart3 className="w-5 h-5 text-honey-dark" />
-              پرفروش‌ترین محصولات
+              پرفروش‌ترین محصولات{periodSuffix}
             </CardTitle>
             <CardDescription>بر اساس تعداد فروخته شده</CardDescription>
           </CardHeader>
@@ -459,9 +468,9 @@ export function ReportsCharts({
         <CardHeader className="px-0">
           <CardTitle className="flex items-center gap-2 text-base font-bold">
             <TrendingUp className="w-5 h-5 text-honey-dark" />
-            رشد هفتگی درآمد
+            رشد درآمد{periodSuffix}
           </CardTitle>
-          <CardDescription>درصد تغییر درآمد نسبت به هفته قبل</CardDescription>
+          <CardDescription>درصد تغییر درآمد نسبت به بازه قبل</CardDescription>
         </CardHeader>
         <CardContent className="px-0">
           {growthSeries.length === 0 ? (
@@ -518,9 +527,9 @@ export function ReportsCharts({
         <CardHeader className="px-0">
           <CardTitle className="flex items-center gap-2 text-base font-bold">
             <Award className="w-5 h-5 text-honey-dark" />
-            جدول برترین نماینده‌ها
+            جدول برترین نماینده‌ها{periodSuffix}
           </CardTitle>
-          <CardDescription>۵ نماینده برتر بر اساس کل فروش</CardDescription>
+          <CardDescription>۵ نماینده برتر در بازه انتخاب‌شده</CardDescription>
         </CardHeader>
         <CardContent className="px-0">
           {topAgents.length === 0 ? (

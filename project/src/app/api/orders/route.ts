@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import {
   generateOrderNumber,
   generateUniqueAmount,
+  toPersianDigits,
 } from "@/lib/format";
 import { FREE_DELIVERY_CITY } from "@/lib/products";
 import { notifyBotNewOrder } from "@/lib/notify-bot";
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
     const productIds = [...new Set(body.items.map((i) => i.productId))];
     const dbProducts = await db.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, name: true, pricePerKg: true },
+      select: { id: true, name: true, pricePerKg: true, stockKg: true },
     });
     const productMap = new Map(dbProducts.map((p) => [p.id, p]));
 
@@ -116,6 +117,37 @@ export async function POST(req: NextRequest) {
       item.productName = p.name;
     }
 
+    // ── B11: Stock validation ──────────────────────────────────────────
+    // Aggregate requested kg per product, then compare against the live
+    // stock value. Per task instructions, we DO NOT expose the stock number
+    // to the customer up-front — but we DO validate here on submission and
+    // return a clear Persian message that tells them how much is available.
+    const requestedKgByProduct = new Map<string, number>();
+    for (const item of body.items) {
+      const kg = item.containerSize * item.quantity;
+      requestedKgByProduct.set(
+        item.productId,
+        (requestedKgByProduct.get(item.productId) ?? 0) + kg
+      );
+    }
+    for (const [productId, requestedKg] of requestedKgByProduct) {
+      const p = productMap.get(productId);
+      if (!p) continue;
+      // Allow tiny float slack (1 gram) to avoid rounding noise
+      if (requestedKg > p.stockKg + 0.001) {
+        return NextResponse.json(
+          {
+            error: `موجودی کافی نیست: ${p.name} — موجودی فعلی: ${toPersianDigits(
+              p.stockKg.toFixed(2).replace(/\.?0+$/, "")
+            )} کیلو، درخواست شما: ${toPersianDigits(
+              requestedKg.toFixed(2).replace(/\.?0+$/, "")
+            )} کیلو. لطفاً سفارش خود را تنظیم کنید.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Recompute total server-side from the validated unit prices
     const totalAmount = body.items.reduce(
       (s, i) => s + i.unitPrice * i.quantity,
@@ -143,34 +175,49 @@ export async function POST(req: NextRequest) {
       attempts++;
     }
 
-    const created = await db.order.create({
-      data: {
-        orderNumber,
-        customerName: body.customerName.trim(),
-        customerPhone: body.customerPhone.trim(),
-        province: body.province,
-        city: body.city,
-        address: body.address?.trim() || null,
-        totalAmount,
-        uniqueAmount,
-        finalAmount,
-        paymentStatus: "pending",
-        deliveryType,
-        notes: body.notes?.trim() || null,
-        items: {
-          create: body.items.map((i) => ({
-            productId: i.productId,
-            productName: i.productName,
-            containerSize: i.containerSize,
-            hasWax: i.hasWax,
-            isWholesale: i.isWholesale,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            total: i.unitPrice * i.quantity,
-          })),
+    // ── B11: Create order + decrement stock atomically ────────────────
+    // We use a transaction so that if the order create fails (e.g. orderNumber
+    // race), the stock decrements don't go through either — and vice versa.
+    const created = await db.$transaction(async (tx) => {
+      const order = await tx.order.create({
+        data: {
+          orderNumber,
+          customerName: body.customerName.trim(),
+          customerPhone: body.customerPhone.trim(),
+          province: body.province,
+          city: body.city,
+          address: body.address?.trim() || null,
+          totalAmount,
+          uniqueAmount,
+          finalAmount,
+          paymentStatus: "pending",
+          deliveryType,
+          notes: body.notes?.trim() || null,
+          items: {
+            create: body.items.map((i) => ({
+              productId: i.productId,
+              productName: i.productName,
+              containerSize: i.containerSize,
+              hasWax: i.hasWax,
+              isWholesale: i.isWholesale,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              total: i.unitPrice * i.quantity,
+            })),
+          },
         },
-      },
-      include: { items: true },
+        include: { items: true },
+      });
+
+      // Decrement stock for each unique product (atomic with order creation)
+      for (const [productId, kg] of requestedKgByProduct) {
+        await tx.product.update({
+          where: { id: productId },
+          data: { stockKg: { decrement: kg } },
+        });
+      }
+
+      return order;
     });
 
     // Notify the Telegram bot so the admin gets an instant alert

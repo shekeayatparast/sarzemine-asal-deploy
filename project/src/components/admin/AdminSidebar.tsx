@@ -5,10 +5,13 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  Store,
   ShoppingCart,
   BarChart3,
   LogOut,
   Crown,
+  User,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,9 +25,12 @@ export interface AdminNavItem {
 
 const NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
-  { href: "/admin/agents", label: "مدیریت نمایندگان", icon: Users },
+  { href: "/admin/products", label: "محصولات", icon: Package },
+  { href: "/admin/agents", label: "مدیریت نمایندگان", icon: Store },
   { href: "/admin/orders", label: "سفارش‌ها", icon: ShoppingCart },
+  { href: "/admin/customers", label: "مشتریان", icon: Users },
   { href: "/admin/reports", label: "گزارش‌ها", icon: BarChart3 },
+  { href: "/admin/profile", label: "پروفایل", icon: User },
 ];
 
 function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {

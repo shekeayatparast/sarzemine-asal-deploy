@@ -180,3 +180,14 @@ export function isValidIranPhone(phone: string): boolean {
   if (/^00989\d{9}$/.test(normalized)) return true;
   return false;
 }
+
+// ── Password strength validation (client-safe) ────────────────────────
+// Pure function — no server-only deps. Lives here so client components
+// (register/login/profile forms) can import it without pulling in
+// next/headers or the db client.
+export function isStrongPassword(pwd: string): { ok: boolean; reason?: string } {
+  if (pwd.length < 6) return { ok: false, reason: "رمز عبور باید حداقل ۶ کاراکتر باشد" };
+  if (!/\d/.test(pwd)) return { ok: false, reason: "رمز عبور باید حداقل یک عدد داشته باشد" };
+  if (!/[a-zA-Z]/.test(pwd)) return { ok: false, reason: "رمز عبور باید حداقل یک حرف داشته باشد" };
+  return { ok: true };
+}

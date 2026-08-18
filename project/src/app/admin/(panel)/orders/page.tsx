@@ -30,6 +30,7 @@ import {
   ArrowRight,
   ExternalLink,
   PackageOpen,
+  User,
 } from "lucide-react";
 import {
   toPersianDigits,
@@ -199,7 +200,38 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                         {formatJalaliDateTime(o.createdAt)}
                       </TableCell>
                       <TableCell>
-                        <p className="text-sm font-medium">{o.customerName}</p>
+                        {o.orderType === "customer" ? (
+                          <>
+                            <Link
+                              href={`/admin/customers/${encodeURIComponent(
+                                o.customerPhone
+                              )}`}
+                              className="text-sm font-medium text-honey-dark hover:underline inline-flex items-center gap-1"
+                            >
+                              <User className="w-3.5 h-3.5 opacity-70" />
+                              {o.customerName}
+                            </Link>
+                            <a
+                              href={`tel:${o.customerPhone}`}
+                              className="block text-[11px] text-muted-foreground hover:text-honey-dark"
+                              dir="ltr"
+                            >
+                              {toPersianDigits(o.customerPhone)}
+                            </a>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium">
+                              {o.customerName}
+                            </p>
+                            <p
+                              className="text-[11px] text-muted-foreground"
+                              dir="ltr"
+                            >
+                              {toPersianDigits(o.customerPhone)}
+                            </p>
+                          </>
+                        )}
                         {o.agent && (
                           <p className="text-[11px] text-muted-foreground">
                             نماینده: {o.agent.storeName}
@@ -229,11 +261,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                       </TableCell>
                       <TableCell>
                         <Button asChild size="sm" variant="ghost">
-                          <Link
-                            href={`/track?orderNumber=${o.orderNumber}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
+                          <Link href={`/admin/orders/${o.id}`}>
                             <ExternalLink className="w-4 h-4" />
                             مشاهده
                           </Link>

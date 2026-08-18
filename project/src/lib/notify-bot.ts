@@ -8,12 +8,22 @@ const BOT_SERVICE_URL =
 /**
  * Notify the Telegram bot that a new order was just placed.
  * Fire-and-forget: never blocks or fails the order creation.
+ *
+ * Accepts either a plain order-number string (for the customer flow) or a
+ * richer object (the agent flow sends additional fields for potential future
+ * use; the bot currently only reads `orderNumber`).
  */
-export function notifyBotNewOrder(orderNumber: string) {
+export function notifyBotNewOrder(
+  payload: string | { orderNumber: string; [k: string]: unknown }
+) {
+  const body =
+    typeof payload === "string"
+      ? { orderNumber: payload }
+      : { ...payload };
   fetch(`${BOT_SERVICE_URL}/notify/new-order`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ orderNumber }),
+    body: JSON.stringify(body),
   }).catch((e) => {
     console.error("[notify-bot] new-order notification failed:", e);
   });

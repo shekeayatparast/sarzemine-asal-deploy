@@ -30,7 +30,7 @@ export function StatCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm text-muted-foreground mb-1.5">{title}</p>
-          <p className="text-2xl font-extrabold text-foreground truncate">
+          <p className="text-xl md:text-2xl font-extrabold text-foreground break-words leading-tight">
             {value}
           </p>
           {hasGrowth && (
